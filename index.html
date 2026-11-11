@@ -191,6 +191,8 @@ input,select,textarea{font:inherit}
 .opt .ph:has(img){height:150px;padding:0;background:#fff!important}.opt .ph img{width:100%;height:100%;object-fit:cover;display:block}.opt .ph img.fit{object-fit:contain}.opt .ph{flex-direction:column;gap:2px}.opt .ph .nop{font-size:11px;color:var(--muted);font-weight:700}
 .decor-photo{width:100%;max-height:380px;object-fit:cover;border-radius:16px;display:block;margin:4px 0 14px}
 #oCake .opt .ph:has(img){height:auto;aspect-ratio:4/3}
+.opt.qty{cursor:default}.stepper{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px 14px}.stepper button{width:38px;height:38px;border-radius:50%;border:2px solid var(--line);background:#fff;font-size:20px;font-weight:800;color:var(--brown);cursor:pointer}.stepper button:disabled{opacity:.35;cursor:not-allowed}.stepper b{font-size:20px;min-width:44px;text-align:center}.stepper .plus{border-color:var(--mint);background:#e6f8f2}
+.qnote{margin:2px 0 6px;font-size:14px;font-weight:700;color:var(--muted)}.qnote b{color:var(--pink-d)}
 .sub-t{font-weight:800;font-size:15.5px;margin:18px 0 10px;display:flex;align-items:center;gap:8px}.sub-t:first-of-type{margin-top:4px}.sub-t small{font-weight:600;color:var(--muted);font-size:13px}
 .flavor{display:none;margin-top:14px;padding:14px 16px;border-radius:14px;background:#fff7ea;align-items:center;gap:10px;flex-wrap:wrap}.flavor.on{display:flex}.flavor b{margin-right:4px}
 .flavor button{border:2px solid var(--line);background:#fff;border-radius:999px;padding:8px 16px;font-weight:800;color:var(--brown);cursor:pointer}.flavor button.on{border-color:var(--mint);background:#e6f8f2}
@@ -491,8 +493,8 @@ input,select,textarea{font:inherit}
         </div>
         <div class="card opt-sec">
           <div class="field-t">메인 메뉴 <small>여러 개 선택 가능 · 다시 누르면 선택 취소 · 총액 기준</small></div>
-          <div class="sub-t">🍕 피자류</div><div class="opts" id="oPizza"></div>
-          <div class="sub-t">🥪 샌드위치류</div><div class="opts" id="oSand"></div>
+          <div class="sub-t">🍕 피자류 <small>최소 2판 · 3판째부터 1판당 +10,000원 · 메뉴 추가금은 1판당</small></div><div class="opts" id="oPizza"></div><p class="qnote" id="pzNote"></p>
+          <div class="sub-t">🥪 샌드위치류 <small>개수 선택 · 선택 안 함 가능</small></div><div class="opts" id="oSand"></div><p class="qnote" id="swNote"></p>
           <div class="sub-t">🌭 간식류</div><div class="opts" id="oSnack"></div>
           <div class="sub-t">🧃 주스류 <small>기본 제공 · 1개 선택 · 어린이 1인 1개</small></div><div class="opts" id="oJuice"></div>
           <div class="sub-t">🥗 샐러드류 <small>기본 제공</small></div><div class="opts" id="oSalad"></div>
@@ -695,6 +697,17 @@ const JUICE=[{id:'peach',n:'납작복숭아 주스',d:'어린이 1인 1개',p:0,
 const SALAD=[{id:'yes',n:'파티용 6종 샐러드',d:'선택',p:0,ic:'🥗'},{id:'no',n:'샐러드 미선택',d:'샐러드 없이 진행',p:0,ic:'🙅'}];
 const CAKE=[{id:'ck1',n:'캘린더 초코 케이크',d:'신세계푸드',p:10000,ic:'🍫'},{id:'ck2',n:'제철과일케이크',d:'신세계푸드',p:15000,ic:'🍓'},{id:'ck3',n:'파베 초콜릿 생크림 케이크',d:'신세계푸드',p:15000,ic:'🎂'},{id:'ck4',n:'레어프로마쥬 케이크',d:'신세계푸드',p:20000,ic:'🧀'}];
 const GIFT=[{id:'bake',n:'구움과자 실속세트',d:'마들렌 2구 + 휘낭시에 2구',p:0,ic:'🧁'},{id:'ls',n:'랑드샤 세트',d:'화이트초코 또는 다크초코 랑드샤 10개입 1팩',p:10000,ic:'🍪'}];
+const pzTotal=()=>Object.values(S.pq).reduce((a,b)=>a+b,0);
+const swTotal=()=>Object.values(S.sq).reduce((a,b)=>a+b,0);
+const pizzaCost=()=>PIZZA.reduce((a,x)=>a+(S.pq[x.id]||0)*x.p,0)+Math.max(0,pzTotal()-2)*10000;
+const sandExtra=()=>Math.max(0,swTotal()-S.kids)*2000;
+function qty(sel,L,Q,unit,canAdd,canSub=()=>true){
+  $(sel).innerHTML=L.map(o=>{const n=Q[o.id]||0;
+    const c=optCard(o,n>0,unit).replace('<button class="opt','<div class="opt qty').replace(/<\/button>$/,'');
+    return c+`<div class="stepper"><button class="minus" data-id="${o.id}" ${n&&canSub()?'':'disabled'} aria-label="빼기">−</button><b>${n}${sel==='#oPizza'?'판':'개'}</b><button class="plus" data-id="${o.id}" ${canAdd()?'':'disabled'} aria-label="더하기">+</button></div></div>`;}).join('');
+  $$(sel+' .minus').forEach(b=>b.onclick=()=>{if(!canSub())return;const k=b.dataset.id;Q[k]=Math.max(0,(Q[k]||0)-1);if(!Q[k])delete Q[k];renderOpts();updateBar();});
+  $$(sel+' .plus').forEach(b=>b.onclick=()=>{if(!canAdd())return;const k=b.dataset.id;Q[k]=(Q[k]||0)+1;renderOpts();updateBar();});
+}
 const LS={white:'화이트초코랑드샤',dark:'다크초코랑드샤'};
 const MENU=[...PIZZA,...SAND,...SNACK];
 /* 메뉴 사진: id별 이미지 주소. 없으면 '사진 준비 중' 칸이 나와요 */
@@ -705,7 +718,7 @@ const ACTIVE='월계점';
 const BRANCHES=['월계점','동탄점','죽전점','일산점','경산점','군산점'];
 const MONTHS=[[2027,2],[2027,3],[2027,4],[2027,5]]; // 3~6월 (0-index month)
 
-const S={branch:'월계점',mi:0,date:null,slot:null,kids:8,guard:1,decor:'std',theme:'pink',menu:new Set(['pz1']),juice:'peach',salad:'yes',cakes:new Set(),gifts:new Set(['bake']),ls:'white',
+const S={branch:'월계점',mi:0,date:null,slot:null,kids:8,guard:1,decor:'std',theme:'pink',menu:new Set(),pq:{pz1:2},sq:{},juice:'peach',salad:'yes',cakes:new Set(),gifts:new Set(['bake']),ls:'white',
   name:'',phone:'',verified:false,email:'',kid:'',age:'',bday:'',alg:'',algTxt:'',req:'',member:false,pay:'카드',bookings:[]};
 try{const b=JSON.parse(localStorage.getItem('pb_bookings')||'[]');if(Array.isArray(b))S.bookings=b;}catch(e){}
 const saveB=()=>{try{localStorage.setItem('pb_bookings',JSON.stringify(S.bookings))}catch(e){}};
@@ -714,7 +727,7 @@ const saveB=()=>{try{localStorage.setItem('pb_bookings',JSON.stringify(S.booking
 function price(){
   const extraKids=Math.max(0,S.kids-8)*25000;
   const sum=(L,set)=>L.filter(x=>set.has(x.id)).reduce((a,x)=>a+x.p,0);
-  const opt=sum(MENU,S.menu)+sum(CAKE,S.cakes)+sum(GIFT,S.gifts)*S.kids;
+  const opt=sum(SNACK,S.menu)+pizzaCost()+sandExtra()+sum(CAKE,S.cakes)+sum(GIFT,S.gifts)*S.kids;
   const pre=300000+opt+extraKids;
   const wd=S.date && isWeekday(S.date) ? Math.round(pre*0.10) : 0;
   const mb=S.member ? Math.round(pre*0.05) : 0;
@@ -833,7 +846,9 @@ function renderOpts(){
     $$(sel+' .opt').forEach(b=>b.onclick=()=>{const id=b.dataset.id;set.has(id)?set.delete(id):set.add(id);renderOpts();updateBar();});};
   const single=(sel,L,key)=>{$(sel).innerHTML=L.map(o=>optCard(o,S[key]===o.id,'')).join('');
     $$(sel+' .opt').forEach(b=>b.onclick=()=>{S[key]=b.dataset.id;renderOpts();updateBar();});};
-  multi('#oPizza',PIZZA,S.menu,'총액');multi('#oSand',SAND,S.menu,'총액');multi('#oSnack',SNACK,S.menu,'총액');
+  qty('#oPizza',PIZZA,S.pq,'1판',()=>true,()=>pzTotal()>2);qty('#oSand',SAND,S.sq,'',()=>swTotal()<S.kids*2);multi('#oSnack',SNACK,S.menu,'총액');
+  const pt=pzTotal();$('#pzNote').innerHTML=`선택 ${pt}판 (최소 2판)`+(pt>2?` · 추가 ${pt-2}판 +${won((pt-2)*10000)}`:'')+(pizzaCost()?` · 피자 추가 금액 <b>+${won(pizzaCost())}</b>`:'');
+  const st=swTotal();$('#swNote').innerHTML=`선택 ${st}개 · 어린이 ${S.kids}명까지 0원, 초과 1개당 +2,000원`+(st>S.kids?` · 초과 ${st-S.kids}개 <b>+${won(sandExtra())}</b>`:'');
   single('#oJuice',JUICE,'juice');single('#oSalad',SALAD,'salad');
   multi('#oCake',CAKE,S.cakes,'총액');
   $('#oGift').innerHTML=GIFT.map(o=>optCard(o,S.gifts.has(o.id),'1인')).join('');
@@ -862,7 +877,7 @@ function valid3(){
 function optSummary(){
   const d=DECOR.find(x=>x.id===S.decor), t=THEME.find(x=>x.id===S.theme);
   const names=(L,set)=>L.filter(x=>set.has(x.id)).map(x=>x.n);
-  const menu=names(MENU,S.menu), cake=names(CAKE,S.cakes), gift=GIFT.filter(x=>S.gifts.has(x.id)).map(x=>x.id==='ls'?`랑드샤 세트(${LS[S.ls]})`:x.n);
+  const menu=[...PIZZA.filter(x=>S.pq[x.id]).map(x=>`${x.n} ${S.pq[x.id]}판`),...SAND.filter(x=>S.sq[x.id]).map(x=>`${x.n} ${S.sq[x.id]}개`),...names(SNACK,S.menu)], cake=names(CAKE,S.cakes), gift=GIFT.filter(x=>S.gifts.has(x.id)).map(x=>x.id==='ls'?`랑드샤 세트(${LS[S.ls]})`:x.n);
   const drink=JUICE.find(x=>x.id===S.juice).n+(S.salad==='yes'?' · 파티용 6종 샐러드':' · 샐러드 미선택');
   return {decor:t.n,menu:menu.join(', ')||'선택 안 함',drink,cake:cake.join(', ')||'선택 안 함',gift:gift.join(', ')||'선택 안 함'};
 }
